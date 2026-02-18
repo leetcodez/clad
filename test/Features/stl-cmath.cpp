@@ -123,6 +123,14 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+#if !defined(__cpp_lib_math_special_functions)
+namespace std {
+  template <typename T>
+  inline T beta(T x, T y) {
+    return std::tgamma(x) * std::tgamma(y) / std::tgamma(x + y);
+  }
+}
+#endif
 
 template <typename T>
 T get_tolerance() {
@@ -295,6 +303,10 @@ DEFINE_FUNCTIONS(atanh) // x in [-1,1]
 //
 DEFINE_FUNCTIONS(erf)  // x in (-inf,+inf)
 
+template<typename T> T f_beta(T x){ return std::beta(x,(T)2.0); } // x in (0, +inf)
+inline float f_betaf(float x){ return std::beta(x, 2.0f); }
+inline long double f_betal(long double x){ return std::beta(x, 2.0L); }
+
 int main() {
   // Absolute value
   CHECK(abs);
@@ -352,6 +364,7 @@ int main() {
 
   // Error / Gamma functions
   CHECK_ALL(erf);
+  CHECK_ALL_RANGE(beta, {0.1, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0});
 
   return 0;
 }

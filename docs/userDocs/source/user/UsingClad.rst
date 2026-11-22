@@ -240,6 +240,10 @@ slots untouched without dereferencing them. For example, when differentiating
     // Slot for unselected parameter x is passed as nullptr:
     f_pb_y.execute(2.0, 3.0, seed, nullptr, &dy);
 
+When differentiating member functions or named function objects, the object
+cotangent buffer (``_d_this``) must be non-null; callers must provide a valid
+pointer to an object accumulator.
+
 For pointer/reference memory, an adjoint buffer may be an incoming memory
 cotangent rather than an append-only scalar accumulator. A reverse sweep can
 transform or clear that buffer when reversing an in-place write. Pre-seed the

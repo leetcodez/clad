@@ -121,11 +121,19 @@ double f_3(double x, double y) {
 //CHECK-NEXT: }
 
 //CHECK: void f_3_pullback_0(double x, double y, double _d_y0, double *_d_x) {
-//CHECK-NEXT:     *_d_x += 2 * _d_y0;
+//CHECK-NEXT:     double _d_y = 0.;
+//CHECK-NEXT:     {
+//CHECK-NEXT:         *_d_x += 2 * _d_y0;
+//CHECK-NEXT:         _d_y += _d_y0;
+//CHECK-NEXT:     }
 //CHECK-NEXT: }
 
 //CHECK: void f_3_pullback_1(double x, double y, double _d_y0, double *_d_y) {
-//CHECK-NEXT:     *_d_y += _d_y0;
+//CHECK-NEXT:     double _d_x = 0.;
+//CHECK-NEXT:     {
+//CHECK-NEXT:         _d_x += 2 * _d_y0;
+//CHECK-NEXT:         *_d_y += _d_y0;
+//CHECK-NEXT:     }
 //CHECK-NEXT: }
 int main () {
   double result[3];

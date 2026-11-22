@@ -301,19 +301,12 @@ static QualType GetDerivedFunctionType(const CallExpr* CE) {
     } else {
       QualType ArgTy = Arg->getType();
       if (ArgTy.getCanonicalType() != Ty.getCanonicalType()) {
-        bool ObjCLifetimeConversion = false;
-        if (SemaRef.IsQualificationConversion(ArgTy, Ty, /*CStyle=*/false,
-                                              ObjCLifetimeConversion)) {
-          TypeSourceInfo* TSI = C.getTrivialTypeSourceInfo(Ty, noLoc);
-          Arg = SemaRef.BuildCStyleCastExpr(noLoc, TSI, noLoc, Arg).get();
-        } else {
-          SourceLocation Loc = call->getBeginLoc();
-          utils::diag(SemaRef, DiagnosticsEngine::Error, Loc,
-                      "derived function type %0 does not match expected "
-                      "callable type %1")
-              << ArgTy << Ty << Loc;
-          return;
-        }
+        SourceLocation Loc = call->getBeginLoc();
+        utils::diag(SemaRef, DiagnosticsEngine::Error, Loc,
+                    "derived function type %0 does not match expected "
+                    "callable type %1")
+            << ArgTy << Ty << Loc;
+        return;
       }
     }
     call->setArg(*derivedFnArgIdx, Arg);
@@ -1468,6 +1461,7 @@ static QualType GetDerivedFunctionType(const CallExpr* CE) {
       Found = LookupPropagator(R.BaseFunctionName + "_pushforward");
 
     const bool isPartialPullback = R.Mode == DiffMode::pullback && R.Function &&
+                                   R.CallUpdateRequired &&
                                    R.DVI.size() != R.Function->getNumParams();
 
     if (Found.empty() && !isPartialPullback)
@@ -1611,9 +1605,7 @@ static QualType GetDerivedFunctionType(const CallExpr* CE) {
               QualType PT = PVD->getType();
               if (const auto* DT = dyn_cast<DecayedType>(PT))
                 PT = DT->getOriginalType();
-              if (utils::isArrayOrPointerType(PT) &&
-                  !PT->isConstantArrayType() &&
-                  !utils::GetValueType(PT).isConstQualified()) {
+              if (utils::isArrayOrPointerType(PT)) {
                 canAdapt = false;
                 unadaptableParam = PVD;
                 break;
@@ -1915,6 +1907,16 @@ static QualType GetDerivedFunctionType(const CallExpr* CE) {
       if (request.Mode == DiffMode::pullback &&
           m_Sema.getDiagnostics().getNumErrors() != errorsBefore)
         return true;
+      if (request.Mode == DiffMode::pullback) {
+        for (const auto& info : request.DVI) {
+          if (info.paramIndexInterval.isValid() || !info.fields.empty()) {
+            utils::diag(
+                m_Sema, DiagnosticsEngine::Error, E->getArg(1)->getBeginLoc(),
+                "clad::pullback does not support index ranges or fields yet");
+            return true;
+          }
+        }
+      }
       if ((request.Mode == DiffMode::reverse ||
            request.Mode == DiffMode::pullback) &&
           request.EnableVariedAnalysis && request.Args)

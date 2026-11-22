@@ -1846,32 +1846,17 @@ namespace clad {
                   .ActOnConditionalOp(GenLoc(), GenLoc(), callerAdjoint,
                                       callerAdjoint, scratchAddr)
                   .get();
-          if (!effectiveArg)
-            effectiveArg = scratchAddr;
+          assert(effectiveArg && "Failed to build conditional expression for "
+                                 "adapted custom pullback");
+          if (!effectiveArg) {
+            utils::diag(
+                m_Sema, DiagnosticsEngine::Error, diagLoc,
+                "failed to adapt custom pullback for partial selection");
+            return nullptr;
+          }
           callArgs[adjointStartIdx + i] = effectiveArg;
         }
       }
-    }
-
-    if (pullbackMode && hasDThis && !isConstructor) {
-      std::size_t dThisIdx =
-          (customObject ? 1 : 0) + numPrimals + (hasSeed ? 1 : 0);
-      QualType thisValTy = originalMD->getThisType()->getPointeeType();
-      thisValTy = utils::getNonConstType(thisValTy, m_Sema);
-      Expr* dThisInit = utils::getZeroInit(thisValTy, m_Sema);
-      VarDecl* scratchThisVD =
-          BuildGlobalVarDecl(thisValTy, "_scratch_this", dThisInit);
-      addToCurrentBlock(BuildDeclStmt(scratchThisVD));
-      Expr* scratchThisAddr = BuildOp(UO_AddrOf, BuildDeclRef(scratchThisVD));
-      Expr* callerDThis = callArgs[dThisIdx];
-      Expr* effectiveDThis =
-          m_Sema
-              .ActOnConditionalOp(GenLoc(), GenLoc(), callerDThis, callerDThis,
-                                  scratchThisAddr)
-              .get();
-      if (!effectiveDThis)
-        effectiveDThis = scratchThisAddr;
-      callArgs[dThisIdx] = effectiveDThis;
     }
 
     if (!pullbackMode) {

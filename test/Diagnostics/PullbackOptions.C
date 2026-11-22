@@ -20,13 +20,37 @@ double fn_mut_ptr(double* tmp, double x) { // expected-error {{dependent non-con
   return tmp[0] * 3.0;
 }
 
+void f_void_mut(double* a, double* b) { // expected-error {{dependent non-const pointer and array parameters are not supported; differentiate w.r.t. 'a' or mark it const}}
+  *a += 2.0;
+  *b = *b * 3.0;
+}
+
+double* f_ptr_multi(double* a, double* b) { // expected-error {{dependent non-const pointer and array parameters are not supported; differentiate w.r.t. 'a' or mark it const}}
+  *a += 2.0;
+  *b += 3.0;
+  return b;
+}
+
+struct Point {
+  double x;
+  double y;
+};
+
+double fn_struct(Point s) {
+  return s.x * s.y;
+}
+
+double fn_arr(const double* p) {
+  return p[0] + p[1];
+}
+
 // 7. Custom pullback adaptation requires scratch of unknown size
-double fn_custom_unknown(double* arr, double y) {
+double fn_custom_unknown(const double* arr, double y) {
   return arr[0] * y;
 }
 namespace clad {
 namespace custom_derivatives {
-void fn_custom_unknown_pullback(double* arr, double y, double seed, double* d_arr, double* d_y);
+void fn_custom_unknown_pullback(const double* arr, double y, double seed, double* d_arr, double* d_y);
 }
 }
 
@@ -56,11 +80,17 @@ int main() {
 
   // 6. Dependent mutable pointer error
   auto pb_mut_ptr = clad::pullback(fn_mut_ptr, "x");
+  auto pb_void_b = clad::pullback(f_void_mut, "b");
+  auto pb_ptr_b = clad::pullback(f_ptr_multi, "b");
 
   // 7. Unsafe pointer scratch for custom pullback adaptation error
   auto pb_custom_unknown = clad::pullback(fn_custom_unknown, "y"); // expected-error {{cannot adapt custom pullback for partial selection; parameter 'arr' requires scratch storage of unknown size}}
 
-  // 8. Subsequent valid differentiation succeeds cleanly in the same Sema instance
+  // 8. Unsupported index ranges and fields
+  auto pb_idx = clad::pullback(fn_arr, "p[1]"); // expected-error {{clad::pullback does not support index ranges or fields yet}}
+  auto pb_field = clad::pullback(fn_struct, "s.x"); // expected-error {{clad::pullback does not support index ranges or fields yet}}
+
+  // 9. Subsequent valid differentiation succeeds cleanly in the same Sema instance
   auto pb_ok = clad::pullback(fn_test);
   double dx = 0.0;
   pb_ok.execute(3.0, 1.0, &dx);

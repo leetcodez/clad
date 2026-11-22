@@ -948,7 +948,7 @@ template <class T> std::false_type is_range(...);
   ///      a non-const reference (whose cotangents propagate through referenced
   ///      memory).
   ///   3. Pointer to `_d_this` (when differentiating instance member functions
-  ///      or named function objects).
+  ///      or named function objects; must be non-null).
   ///   4. One pointer to an output adjoint variable per primal parameter,
   ///      in primal parameter order. Pass nullptr for passive or unselected
   ///      parameters; only selected adjoints are consumed.

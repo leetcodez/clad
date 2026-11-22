@@ -86,13 +86,13 @@ int main() {
   printf("Member full custom: d_factor=%.0f dx=%.0f\n", d_cs.factor, dx_mem_full);
   // CHECK-EXEC: Member full custom: d_factor=7 dx=70
 
-  // Test 6: Member function partial custom pullback w.r.t "x" with nullable d_this
-  CustomStruct d_cs_null{0.0};
+  // Test 6: Member function partial custom pullback w.r.t "x" with real d_this
+  CustomStruct d_cs_mem{0.0};
   auto pb_mem_part = clad::pullback(&CustomStruct::compute, "x");
   double dx_mem_part = 10.0;
-  pb_mem_part.execute(cs, 4.0, 2.0, nullptr, &dx_mem_part);
-  printf("Member partial custom nullable d_this: dx=%.0f\n", dx_mem_part);
-  // CHECK-EXEC: Member partial custom nullable d_this: dx=150
+  pb_mem_part.execute(cs, 4.0, 2.0, &d_cs_mem, &dx_mem_part);
+  printf("Member partial custom d_this: dx=%.0f\n", dx_mem_part);
+  // CHECK-EXEC: Member partial custom d_this: dx=150
 
   return 0;
 }

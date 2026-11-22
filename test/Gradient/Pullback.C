@@ -24,14 +24,21 @@ double f_scalar(double x, double y) {
 // CHECK-NEXT: }
 
 // CHECK: void f_scalar_pullback_0(double x, double y, double _d_y0, double *_d_x) {
+// CHECK-NEXT:     double _d_y = 0.;
 // CHECK-NEXT:     {
 // CHECK-NEXT:         *_d_x += 3. * _d_y0 * x;
 // CHECK-NEXT:         *_d_x += 3. * x * _d_y0;
+// CHECK-NEXT:         _d_y += 4. * _d_y0;
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 // CHECK: void f_scalar_pullback_1(double x, double y, double _d_y0, double *_d_y) {
-// CHECK-NEXT:     *_d_y += 4. * _d_y0;
+// CHECK-NEXT:     double _d_x = 0.;
+// CHECK-NEXT:     {
+// CHECK-NEXT:         _d_x += 3. * _d_y0 * x;
+// CHECK-NEXT:         _d_x += 3. * x * _d_y0;
+// CHECK-NEXT:         *_d_y += 4. * _d_y0;
+// CHECK-NEXT:     }
 // CHECK-NEXT: }
 
 // 2. Float function
@@ -542,19 +549,19 @@ int main() {
   printf("Mixed 3 last param: dc=%.2f\n", dc_m3);
   // CHECK-EXEC: Mixed 3 last param: dc=1.00
 
-  // Test 25: No-seed void multi-param partial selection of later parameter
-  auto pb_void_b = clad::pullback(f_void_mut, "b");
-  double va = 1.0, vb = 2.0, d_vb = 2.0;
-  pb_void_b.execute(&va, &vb, nullptr, &d_vb);
-  printf("Void partial b: db=%.2f\n", d_vb);
-  // CHECK-EXEC: Void partial b: db=6.00
+  // Test 25: No-seed void multi-param selection of both parameters
+  auto pb_void_ab = clad::pullback(f_void_mut, "a, b");
+  double va = 1.0, vb = 2.0, d_va = 0.0, d_vb = 2.0;
+  pb_void_ab.execute(&va, &vb, &d_va, &d_vb);
+  printf("Void full ab: db=%.2f\n", d_vb);
+  // CHECK-EXEC: Void full ab: db=6.00
 
-  // Test 26: No-seed pointer multi-param partial selection of later parameter
-  auto pb_ptr_b = clad::pullback(f_ptr_multi, "b");
-  double pa = 1.0, pb_val = 2.0, d_pb_val = 5.0;
-  pb_ptr_b.execute(&pa, &pb_val, nullptr, &d_pb_val);
-  printf("Pointer partial b: d_b=%.2f\n", d_pb_val);
-  // CHECK-EXEC: Pointer partial b: d_b=5.00
+  // Test 26: No-seed pointer multi-param selection of both parameters
+  auto pb_ptr_ab = clad::pullback(f_ptr_multi, "a, b");
+  double pa = 1.0, pb_val = 2.0, d_pa = 0.0, d_pb_val = 5.0;
+  pb_ptr_ab.execute(&pa, &pb_val, &d_pa, &d_pb_val);
+  printf("Pointer full ab: d_b=%.2f\n", d_pb_val);
+  // CHECK-EXEC: Pointer full ab: d_b=5.00
 
   // Test 27: No-seed reference multi-param partial selection of later parameter
   auto pb_ref_b = clad::pullback(f_ref_multi, "b");
@@ -620,13 +627,14 @@ int main() {
          dx_iref, dx_istruct);
   // CHECK-EXEC: Ref intermediate: dx=41.00, Struct intermediate: dx=43.00
 
-  // Test 33: Member function partial pullback with nullable d_this, non-unit seed and accumulation
+  // Test 33: Member function partial pullback with non-unit seed and accumulation
   MemberOffset mo{3.0};
+  MemberOffset d_mo{0.0};
   auto pb_mo_y = clad::pullback(&MemberOffset::scale, "y");
   double dy_mo = 5.0;
-  pb_mo_y.execute(mo, 4.0, 2.0, 2.0, nullptr, nullptr, &dy_mo);
-  printf("Member nullable d_this: dy=%.2f\n", dy_mo);
-  // CHECK-EXEC: Member nullable d_this: dy=29.00
+  pb_mo_y.execute(mo, 4.0, 2.0, 2.0, &d_mo, nullptr, &dy_mo);
+  printf("Member pullback d_this: dy=%.2f\n", dy_mo);
+  // CHECK-EXEC: Member pullback d_this: dy=29.00
 
   return 0;
 }
